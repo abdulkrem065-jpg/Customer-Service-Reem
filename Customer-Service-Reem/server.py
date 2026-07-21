@@ -40,8 +40,8 @@ def webhook():
             resp.message("أهلاً بك! كيف يمكنني مساعدتك اليوم؟")
             return str(resp)
 
-        # استدعاء موديل gemini-1.5-flash مع التعليمات النظامية للحفاظ على هوية ريم
-        model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=SYSTEM_PROMPT)
+        # استدعاء موديل gemini-1.5-flash-latest مع التعليمات النظامية للحفاظ على هوية ريم
+        model = genai.GenerativeModel('gemini-1.5-flash-latest', system_instruction=SYSTEM_PROMPT)
         response = model.generate_content(incoming_msg)
         
         reply_text = response.text if response and hasattr(response, 'text') else "تم استلام رسالتك بنجاح."
