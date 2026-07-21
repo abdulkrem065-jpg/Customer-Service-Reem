@@ -1,16 +1,14 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request
 import google.generativeai as genai
-from datetime import datetime
+from twilio.twiml.messaging_response import MessagingResponse
 
 app = Flask(__name__)
 
-# تهيئة إعدادات Gemini API بأمان من متغيرات البيئة
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-
-model = genai.GenerativeModel('gemini-1.5-flash')
+# إعداد مفتاح API
+GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
+if GEMINI_KEY:
+    genai.configure(api_key=GEMINI_KEY)
 
 # النظام التوجيهي لـ "ريم" (هوية مؤسسة الذيباني)
 SYSTEM_PROMPT = """
@@ -33,33 +31,37 @@ SYSTEM_PROMPT = """
 @app.route('/webhook', methods=['POST'])
 def webhook():
     try:
-        data = request.get_json() or {}
-        message = data.get('message')
-        sender = data.get('sender', 'عميل')
-        
-        if not message:
-            return jsonify({'status': 'error', 'reply': 'المحتوى فارغ، يرجى كتابة رسالة.'}), 400
+        # قراءة النص القادم من الواتساب
+        incoming_msg = request.values.get('Body', '').strip()
+        print(f"Message received: {incoming_msg}")
 
-        full_prompt = f"{SYSTEM_PROMPT}\n\nالعميل ({sender}): {message}"
-        response = model.generate_content(full_prompt)
-        reply = response.text
+        if not incoming_msg:
+            resp = MessagingResponse()
+            resp.message("أهلاً بك! كيف يمكنني مساعدتك اليوم؟")
+            return str(resp)
+
+        # استدعاء موديل gemini-1.5-flash مع التعليمات النظامية للحفاظ على هوية ريم
+        model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=SYSTEM_PROMPT)
+        response = model.generate_content(incoming_msg)
         
-        return jsonify({
-            'reply': reply,
-            'status': 'success',
-            'timestamp': datetime.utcnow().isoformat()
-        })
+        reply_text = response.text if response and hasattr(response, 'text') else "تم استلام رسالتك بنجاح."
+
+        # تجهيز رد Twilio
+        resp = MessagingResponse()
+        resp.message(reply_text)
+        return str(resp)
+
     except Exception as e:
-        return jsonify({'reply': 'عذراً، واجهت ريم مشكلة تقنية مؤقتة.', 'error': str(e)}), 500
-
-@app.route('/health', methods=['GET'])
-def health():
-    return jsonify({'status': 'healthy', 'service': 'Al-Dhibani Reem Agent (Flask)'})
+        print(f"Error in webhook execution: {str(e)}")
+        resp = MessagingResponse()
+        resp.message("مرحباً بك! استلمت رسالتك وجاري معالجتها.")
+        return str(resp)
 
 @app.route('/', methods=['GET'])
 def index():
-    return "<h1>🤖 وكيل ريم لخدمة العملاء (Flask) يعمل بنجاح!</h1>"
+    return "Reem Customer Service Bot is Running!", 200
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 3000))
+    port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port)
+
