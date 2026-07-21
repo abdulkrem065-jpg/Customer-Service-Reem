@@ -88,10 +88,11 @@ export default function App() {
   const [recentCapturedLead, setRecentCapturedLead] = useState<Lead | null>(null);
   const [showNotification, setShowNotification] = useState<boolean>(false);
 
-  // Search & Filter States
+  // Search, Filter & Sort States
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "alphabetical">("newest");
 
   // Edit/Add Forms
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
@@ -398,7 +399,7 @@ export default function App() {
 
   // --- CRM Filters & Calculations ---
   const filteredLeads = useMemo(() => {
-    return leads.filter(l => {
+    const list = leads.filter(l => {
       const matchQuery =
         l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         l.mobile.includes(searchQuery) ||
@@ -410,7 +411,72 @@ export default function App() {
 
       return matchQuery && matchStatus && matchType;
     });
-  }, [leads, searchQuery, statusFilter, typeFilter]);
+
+    return [...list].sort((a, b) => {
+      if (sortBy === "newest") {
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      }
+      if (sortBy === "oldest") {
+        return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+      }
+      if (sortBy === "alphabetical") {
+        return a.name.localeCompare(b.name, lang === "ar" ? "ar" : "en");
+      }
+      return 0;
+    });
+  }, [leads, searchQuery, statusFilter, typeFilter, sortBy, lang]);
+
+  // Export filtered leads to CSV
+  const handleExportCSV = () => {
+    if (filteredLeads.length === 0) {
+      alert(lang === "ar" ? "لا توجد بيانات عملاء متوافقة مع الفلتر للتصدير." : "No leads match current filters to export.");
+      return;
+    }
+
+    const headers = [
+      lang === "ar" ? "المعرف" : "ID",
+      lang === "ar" ? "الاسم" : "Name",
+      lang === "ar" ? "الجوال" : "Mobile",
+      lang === "ar" ? "البريد الإلكتروني" : "Email",
+      lang === "ar" ? "نوع الطلب" : "Request Type",
+      lang === "ar" ? "الخدمة المطلوبة" : "Service Type",
+      lang === "ar" ? "العرض المقترح" : "Suggested Quote",
+      lang === "ar" ? "الحالة" : "Status",
+      lang === "ar" ? "التاريخ" : "Timestamp",
+      lang === "ar" ? "الملاحظات والملخص" : "Notes & Summary"
+    ];
+
+    const escapeCsv = (str: string | undefined | null) => {
+      if (!str) return '""';
+      const escaped = String(str).replace(/"/g, '""');
+      return `"${escaped}"`;
+    };
+
+    const rows = filteredLeads.map(lead => [
+      escapeCsv(lead.id),
+      escapeCsv(lead.name),
+      escapeCsv(lead.mobile),
+      escapeCsv(lead.email),
+      escapeCsv(lead.requestType),
+      escapeCsv(lead.serviceType),
+      escapeCsv(lead.suggestedQuote),
+      escapeCsv(lead.status),
+      escapeCsv(new Date(lead.timestamp).toLocaleString(lang === "ar" ? "ar-SA" : "en-US")),
+      escapeCsv(lead.summary || lead.notes || "")
+    ]);
+
+    const csvContent = [headers.map(h => `"${h}"`).join(","), ...rows.map(row => row.join(","))].join("\n");
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", url);
+    downloadAnchor.setAttribute("download", `reem_leads_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    document.body.removeChild(downloadAnchor);
+    URL.revokeObjectURL(url);
+  };
 
   // Analytics Math
   const analytics = useMemo(() => {
@@ -1042,8 +1108,8 @@ export default function App() {
                   />
                 </div>
 
-                {/* Filter Controls */}
-                <div className="flex gap-2 flex-wrap text-xs">
+                {/* Filter & Sort Controls */}
+                <div className="flex gap-2 flex-wrap items-center text-xs">
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
@@ -1067,6 +1133,27 @@ export default function App() {
                     <option value="استفسار عام">استفسار عام</option>
                     <option value="شكوى">شكوى</option>
                   </select>
+
+                  {/* Sort dropdown */}
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as "newest" | "oldest" | "alphabetical")}
+                    className="px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 focus:outline-hidden font-medium"
+                  >
+                    <option value="newest">{t.sortNewest}</option>
+                    <option value="oldest">{t.sortOldest}</option>
+                    <option value="alphabetical">{t.sortAlphabetical}</option>
+                  </select>
+
+                  {/* Export CSV Button */}
+                  <button
+                    onClick={handleExportCSV}
+                    className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold flex items-center gap-1.5 transition-all shadow-xs"
+                    title={t.exportCsv}
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>{t.exportCsv}</span>
+                  </button>
                 </div>
 
               </div>
