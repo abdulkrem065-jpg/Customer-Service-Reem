@@ -6,7 +6,7 @@ from twilio.twiml.messaging_response import MessagingResponse
 app = Flask(__name__)
 
 # إعداد مفتاح API
-GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
+GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_KEY:
     genai.configure(api_key=GEMINI_KEY)
 
@@ -40,11 +40,14 @@ def webhook():
             resp.message("أهلاً بك! كيف يمكنني مساعدتك اليوم؟")
             return str(resp)
 
-        # استدعاء موديل gemini-1.5-flash-latest مع التعليمات النظامية للحفاظ على هوية ريم
-        model = genai.GenerativeModel('gemini-1.5-flash-latest', system_instruction=SYSTEM_PROMPT)
-        response = model.generate_content(incoming_msg)
-        
-        reply_text = response.text if response and hasattr(response, 'text') else "تم استلام رسالتك بنجاح."
+        # استدعاء موديل gemini-1.5-flash مع التعليمات النظامية للحفاظ على هوية ريم
+        try:
+            model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=SYSTEM_PROMPT)
+            response = model.generate_content(incoming_msg)
+            reply_text = response.text if response and hasattr(response, 'text') else "تم استلام رسالتك بنجاح."
+        except Exception as gemini_err:
+            print(f"Detailed Gemini API Error: {type(gemini_err).__name__}: {gemini_err}")
+            reply_text = "أهلاً بك! تم استلام رسالتك وسيتم المتابعة والرد عليك من فريق العمل."
 
         # تجهيز رد Twilio
         resp = MessagingResponse()
