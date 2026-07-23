@@ -33,6 +33,9 @@ import {
   HelpCircle,
   Sparkles,
   Radio,
+  Bell,
+  X,
+  CalendarCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -125,6 +128,36 @@ export default function App() {
     notes: "",
     leadId: ""
   });
+
+  // Schedule Appointments Alert States & Calculations (Today & Tomorrow)
+  const [showAlertsBanner, setShowAlertsBanner] = useState<boolean>(true);
+  const [showAlertsDropdown, setShowAlertsDropdown] = useState<boolean>(false);
+
+  const upcomingScheduleAlerts = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const todayStr = `${year}-${month}-${day}`;
+
+    const tomorrowDate = new Date(now);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tYear = tomorrowDate.getFullYear();
+    const tMonth = String(tomorrowDate.getMonth() + 1).padStart(2, "0");
+    const tDay = String(tomorrowDate.getDate()).padStart(2, "0");
+    const tomorrowStr = `${tYear}-${tMonth}-${tDay}`;
+
+    const todayEvents = calendarEvents.filter(e => e.date === todayStr);
+    const tomorrowEvents = calendarEvents.filter(e => e.date === tomorrowStr);
+
+    return {
+      todayStr,
+      tomorrowStr,
+      todayEvents,
+      tomorrowEvents,
+      totalCount: todayEvents.length + tomorrowEvents.length
+    };
+  }, [calendarEvents]);
 
   // Direct numbers configurations
   const [directPhone, setDirectPhone] = useState(companyConfig.phone);
@@ -698,8 +731,84 @@ export default function App() {
             </a>
           </div>
 
-          {/* Theme, Lang, Role switches */}
+          {/* Theme, Lang, Notifications, Role switches */}
           <div className="flex items-center gap-2">
+            {/* Schedule Alert Notification Bell */}
+            <div className="relative">
+              <button
+                onClick={() => setShowAlertsDropdown(prev => !prev)}
+                className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors relative"
+                title="تنبيهات المواعيد والجدولة"
+              >
+                <Bell className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+                {upcomingScheduleAlerts.totalCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center animate-bounce">
+                    {upcomingScheduleAlerts.totalCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Dropdown */}
+              {showAlertsDropdown && (
+                <div className="absolute left-0 sm:right-0 sm:left-auto mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-50 p-4 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b dark:border-slate-800">
+                    <h4 className="font-bold text-xs flex items-center gap-1.5 text-slate-800 dark:text-white">
+                      <Bell className="w-4 h-4 text-amber-500" />
+                      تنبيه المواعيد القادمة ({upcomingScheduleAlerts.totalCount})
+                    </h4>
+                    <button onClick={() => setShowAlertsDropdown(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {upcomingScheduleAlerts.totalCount === 0 ? (
+                    <p className="text-xs text-slate-400 text-center py-4">لا توجد مواعيد مجدولة لليوم أو الغد.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {upcomingScheduleAlerts.todayEvents.map(event => (
+                        <div key={event.id} className="p-2.5 bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 rounded-xl text-xs space-y-1">
+                          <div className="flex items-center justify-between font-semibold text-emerald-800 dark:text-emerald-300">
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-emerald-500" />
+                              {event.time} - موعد اليوم
+                            </span>
+                            <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded-md font-bold">اليوم</span>
+                          </div>
+                          <p className="font-bold text-slate-800 dark:text-slate-100">{event.title}</p>
+                          <p className="text-slate-500 dark:text-slate-400 text-[11px]">العميل: {event.leadName}</p>
+                        </div>
+                      ))}
+
+                      {upcomingScheduleAlerts.tomorrowEvents.map(event => (
+                        <div key={event.id} className="p-2.5 bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl text-xs space-y-1">
+                          <div className="flex items-center justify-between font-semibold text-amber-800 dark:text-amber-300">
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-amber-500" />
+                              {event.time} - موعد الغد
+                            </span>
+                            <span className="text-[10px] bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-md font-bold">الغد</span>
+                          </div>
+                          <p className="font-bold text-slate-800 dark:text-slate-100">{event.title}</p>
+                          <p className="text-slate-500 dark:text-slate-400 text-[11px]">العميل: {event.leadName}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setActiveTab("calendar");
+                      setShowAlertsDropdown(false);
+                    }}
+                    className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs"
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    الانتقال إلى تقويم المواعيد
+                  </button>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={() => setTheme(theme === "light" ? "dark" : "light")}
               className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
@@ -742,6 +851,51 @@ export default function App() {
           <span>{role === "admin" ? "صلاحيات كاملة للمدير لتعديل الأسعار وإدارة المبيعات" : "وضع العرض ومتابعة العملاء لموظفي المبيعات"}</span>
         </div>
       </div>
+
+      {/* UPCOMING SCHEDULE APPOINTMENTS ALERT BANNER */}
+      {showAlertsBanner && upcomingScheduleAlerts.totalCount > 0 && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-blue-500/10 border-b border-amber-500/20 px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5 text-slate-800 dark:text-slate-100">
+            <div className="bg-amber-500 text-white p-1.5 rounded-lg shadow-xs flex items-center justify-center animate-bounce">
+              <Bell className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="font-bold text-slate-900 dark:text-white">
+                تنبيه المواعيد والجدولة:
+              </span>{" "}
+              لديك{" "}
+              {upcomingScheduleAlerts.todayEvents.length > 0 && (
+                <span className="font-bold text-emerald-600 dark:text-emerald-400 mx-1">
+                  ({upcomingScheduleAlerts.todayEvents.length}) موعد اليوم
+                </span>
+              )}
+              {upcomingScheduleAlerts.todayEvents.length > 0 && upcomingScheduleAlerts.tomorrowEvents.length > 0 && " و "}
+              {upcomingScheduleAlerts.tomorrowEvents.length > 0 && (
+                <span className="font-bold text-amber-600 dark:text-amber-400 mx-1">
+                  ({upcomingScheduleAlerts.tomorrowEvents.length}) موعد غداً
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActiveTab("calendar")}
+              className="px-3 py-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-lg text-[11px] flex items-center gap-1 transition-all shadow-xs"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              عرض المواعيد بالتقويم
+            </button>
+            <button
+              onClick={() => setShowAlertsBanner(false)}
+              className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg"
+              title="إغلاق التنبيه"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* MAIN LAYOUT */}
       <div className="max-w-[1600px] mx-auto p-2 lg:p-3 grid grid-cols-1 lg:grid-cols-12 gap-3">
@@ -799,7 +953,14 @@ export default function App() {
               <Calendar className="w-3.5 h-3.5" />
               {t.calendar}
             </span>
-            {isGoogleCalendarSynced && <span className="bg-blue-100 text-blue-800 text-[9px] px-1.5 py-0.5 rounded-md font-bold">GCAL</span>}
+            <div className="flex items-center gap-1">
+              {upcomingScheduleAlerts.totalCount > 0 && (
+                <span className="bg-amber-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold animate-pulse">
+                  {upcomingScheduleAlerts.totalCount} تنبيه
+                </span>
+              )}
+              {isGoogleCalendarSynced && <span className="bg-blue-100 text-blue-800 text-[9px] px-1.5 py-0.5 rounded-md font-bold">GCAL</span>}
+            </div>
           </button>
 
           <button
