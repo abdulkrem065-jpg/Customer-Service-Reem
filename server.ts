@@ -24,7 +24,7 @@ const PORT = 3000;
 
 // Initialize Gemini SDK
 const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
+  apiKey: process.env.GEMINI_API_KEY || process.env.API_KEY,
   httpOptions: {
     headers: {
       'User-Agent': 'aistudio-build',
@@ -121,14 +121,14 @@ async function connectToWhatsApp() {
         try {
           const systemInstruction = `
 أنت "ريم"، مساعدة ذكاء اصطناعي ذكية ومحترفة لشركة "التقنية الذكية".
-مهمتك الأساسية هي الرد على تواصل العملاء خارج أوقات العمل الرسمية بنبرة ودودة، مهذبة ودافئة باللغة العربية الفصحى أو العامية المهذبة المفهومة.
+مهمتك الأساسية هي الرد على تواصل العملاء على مدار 24 ساعة طوال أيام الأسبوع بنبرة ودودة، مهذبة ودافئة باللغة العربية الفصحى أو العامية المهذبة المفهومة.
 
 🎯 أهدافك الأساسية:
-1. الترحيب بالعميل بحرارة واحترافية، والاعتذار بلطف عن عدم توفر الموظفين حالياً لأن الوقت خارج أوقات العمل الرسمية.
+1. الترحيب بالعميل بحرارة واحترافية.
 2. فهم احتياج العميل بسرعة وتحديد الفئة: (استفسار عام، عرض سعر، شكوى، حجز موعد).
 3. تقديم عروض أسعار أولية ودقيقة.
 4. جمع بيانات العميل الأساسية (الاسم، رقم الجوال، البريد الإلكتروني، نوع الخدمة المطلوبة).
-5. إبلاغ العميل بأنه سيتم التواصل معه في أول يوم عمل لتأكيد التفاصيل.
+5. تقديم المساعدة الفورية والإجابة على استفسارات العميل بدقة.
 
 📌 قواعد مهمة:
 - حافظ على الردود موجزة ومناسبة لمحادثات الواتساب.
@@ -137,7 +137,7 @@ async function connectToWhatsApp() {
 `;
 
           const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-1.5-flash",
             contents: userMessage,
             config: {
               systemInstruction,
@@ -145,13 +145,13 @@ async function connectToWhatsApp() {
             },
           });
 
-          const botReply = response.text || "أهلاً بك! تم استلام رسالتك وسيتم المتابعة والرد عليك قريباً.";
+          const replyText = response.text || "أهلاً بك! تم استلام رسالتك وسيتم المتابعة والرد عليك قريباً.";
 
-          // 4. Send Gemini reply directly via Baileys to WhatsApp user
-          await sock.sendMessage(remoteJid, { text: botReply });
-          console.log(`📤 [WhatsApp Reply Sent via Baileys] To: ${remoteJid}`);
+          // 4. Send Gemini reply directly via Baileys to WhatsApp user with quoting
+          await sock.sendMessage(msg.key.remoteJid, { text: replyText }, { quoted: msg });
+          console.log(`📤 [WhatsApp Reply Sent via Baileys] To: ${msg.key.remoteJid}`);
         } catch (err) {
-          console.error("Error processing Gemini response or sending via Baileys:", err);
+          console.error("❌ Error processing Gemini response or sending via Baileys:", err);
         }
       }
     });
