@@ -67,7 +67,13 @@ export default function App() {
 
   const [companyConfig, setCompanyConfig] = useState<CompanyConfig>(() => {
     const saved = localStorage.getItem("reem_company_config");
-    return saved ? JSON.parse(saved) : defaultCompanyConfig;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return { ...defaultCompanyConfig, ...parsed, weekendDays: [] };
+      } catch (e) {}
+    }
+    return defaultCompanyConfig;
   });
 
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>(() => {
@@ -824,7 +830,9 @@ export default function App() {
               <div className="flex justify-between">
                 <span>العطلات الأسبوعية:</span>
                 <span className="font-semibold text-slate-700 dark:text-slate-200">
-                  {companyConfig.weekendDays.map(d => d === 5 ? t.friday : d === 6 ? t.saturday : t.sunday).join(", ")}
+                  {companyConfig.weekendDays && companyConfig.weekendDays.length > 0
+                    ? companyConfig.weekendDays.map(d => d === 5 ? t.friday : d === 6 ? t.saturday : t.sunday).join(", ")
+                    : "لا يوجد عطلات أسبوعية (عمل 7 أيام)"}
                 </span>
               </div>
             </div>

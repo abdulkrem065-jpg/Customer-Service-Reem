@@ -104,7 +104,7 @@ export const defaultCompanyConfig: CompanyConfig = {
   whatsapp: "0500000000",
   businessStart: "09:00",
   businessEnd: "17:00",
-  weekendDays: [5, 6] // Friday and Saturday (Standard Arab Weekend)
+  weekendDays: [] // No weekend days (Operating 7 days a week)
 };
 
 export const defaultCalendarEvents: CalendarEvent[] = [
