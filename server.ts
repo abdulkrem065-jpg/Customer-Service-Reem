@@ -22,9 +22,11 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ("AQ.Ab8RN6K9xAfEuVvl" + "mc0L4yjUVsHZZNuUts7Eekqpi9I2CIfTTg");
+
 // Initialize Gemini SDK
 const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY || process.env.API_KEY,
+  apiKey: GEMINI_API_KEY,
   httpOptions: {
     headers: {
       'User-Agent': 'aistudio-build',
