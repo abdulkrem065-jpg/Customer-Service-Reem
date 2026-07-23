@@ -3,18 +3,16 @@ import path from "path";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
-import baileysImport, {
+import makeWASocket, {
   DisconnectReason,
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
 } from "@whiskeysockets/baileys";
-
-const makeWASocket: typeof baileysImport =
-  typeof baileysImport === "function"
-    ? baileysImport
-    : (baileysImport as any)?.default || baileysImport;
 import qrcode from "qrcode-terminal";
 import pino from "pino";
+
+// Safe resolver for Baileys socket initialization across CJS/ESM runtimes
+const getWASocket = (fn: any) => (typeof fn === "function" ? fn : fn?.default || fn);
 
 dotenv.config();
 
@@ -46,7 +44,8 @@ async function connectToWhatsApp() {
 
     console.log(`Connecting to WhatsApp via Baileys (v${version.join(".")})...`);
 
-    const sock = makeWASocket({
+    const socketBuilder = getWASocket(makeWASocket);
+    const sock = socketBuilder({
       version,
       auth: state,
       printQRInTerminal: false,
