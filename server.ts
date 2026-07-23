@@ -3,11 +3,16 @@ import path from "path";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
-import makeWASocket, {
+import baileysImport, {
   DisconnectReason,
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
 } from "@whiskeysockets/baileys";
+
+const makeWASocket: typeof baileysImport =
+  typeof baileysImport === "function"
+    ? baileysImport
+    : (baileysImport as any)?.default || baileysImport;
 import qrcode from "qrcode-terminal";
 import pino from "pino";
 
